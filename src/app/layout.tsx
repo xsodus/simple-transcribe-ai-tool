@@ -1,20 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { ReactNode } from 'react';
-
-const theme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: { main: '#1565c0' },
-    secondary: { main: '#ff6f00' },
-    background: { default: '#f5f7fa' }
-  },
-  shape: { borderRadius: 10 },
-  typography: {
-    fontFamily: 'Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif'
-  }
-});
+import AppThemeProvider from '@/components/AppThemeProvider';
 
 export const metadata: Metadata = {
   title: 'Simple Transcribe AI Tool',
@@ -33,10 +20,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <meta name="theme-color" content="#1565c0" />
       </head>
       <body>
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          {children}
-        </ThemeProvider>
+  <AppThemeProvider>{children}</AppThemeProvider>
       </body>
     </html>
   );
