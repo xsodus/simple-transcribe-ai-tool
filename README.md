@@ -12,22 +12,93 @@ Next.js 14 (App Router + TypeScript) application that lets you upload a single a
 ## Prerequisites
 
 - Node.js 20.11.1+ (or 20+ recommended)
-- An OpenAI API key with access to the transcription model
+- EITHER:
+	- An OpenAI API key with access to `gpt-4o-transcribe` (public OpenAI), OR
+	- An Azure OpenAI (Azure AI Foundry) resource with a deployed transcription-capable model (deployment name you create, e.g. `gpt-4o-transcribe`).
 
-## Setup
+## Environment Variables
+
+You can run with either Public OpenAI or Azure OpenAI. If **all** Azure vars are present the API route will prefer Azure; otherwise it falls back to Public OpenAI.
+
+Required (choose ONE provider path):
+
+Public OpenAI only:
+```
+OPENAI_API_KEY=sk-...
+```
+
+Azure OpenAI (Azure AI Foundry) only:
+```
+AZURE_OPENAI_ENDPOINT=https://<your-resource-name>.openai.azure.com
+AZURE_OPENAI_API_KEY=<azure-openai-key>
+AZURE_OPENAI_DEPLOYMENT=<your-deployment-name>   # e.g. gpt-4o-transcribe
+AZURE_OPENAI_API_VERSION=2024-06-01              # optional; default used if omitted
+```
+
+You may keep BOTH sets defined; Azure wins if its three core vars (endpoint, key, deployment) are present.
+
+Security notes:
+- Never commit real keys. `.env.local` is git-ignored (verify before committing).
+- Rotate keys if leaked.
+- In production, inject vars via your platform's secret manager (Vercel / Azure App Service / Container App / etc.).
+
+## .env Example
+
+An example file is provided as `.env.example`. Copy and edit:
+
+```bash
+cp .env.example .env.local
+```
+
+Then fill in the values you need. Leave unused provider vars blank or delete them.
+
+## Azure OpenAI (Azure AI Foundry) Deployment Steps
+
+If you prefer Azure (good for enterprise governance, regional data residency, and quota isolation):
+
+1. Create resource:
+	- In Azure Portal search for "Azure OpenAI" (aka Azure AI Foundry) and create a resource.
+	- Choose a region that supports the model (e.g., East US, Sweden Central – check current availability).
+2. Get keys & endpoint:
+	- Go to the resource > Keys & Endpoint. Copy one Key and the Endpoint URL (`https://<name>.openai.azure.com`).
+3. Deploy a model:
+	- Open the Azure AI Foundry (Studio) for the resource.
+	- Go to Deployments > Create new.
+	- Select the desired transcription-capable model (e.g. `gpt-4o-transcribe` or the closest available).
+	- Set a deployment name (e.g. `gpt-4o-transcribe`). This exact string goes into `AZURE_OPENAI_DEPLOYMENT`.
+4. (Optional) Confirm API version:
+	- Use `2024-06-01` unless Azure docs direct otherwise. Put it in `AZURE_OPENAI_API_VERSION` if you need a different version.
+5. Populate your `.env.local`:
+	```
+	AZURE_OPENAI_ENDPOINT=https://<your-resource-name>.openai.azure.com
+	AZURE_OPENAI_API_KEY=<key>
+	AZURE_OPENAI_DEPLOYMENT=gpt-4o-transcribe
+	AZURE_OPENAI_API_VERSION=2024-06-01
+	```
+6. (Optional fallback) Keep `OPENAI_API_KEY` as a backup; if Azure vars are incomplete the app will use public OpenAI.
+
+Testing your Azure deployment:
+```bash
+npm run dev
+# Upload an audio file; watch server logs for whether Azure or public OpenAI was selected.
+```
+
+Troubleshooting:
+- 401 / 403: Check key + endpoint + region match and the header usage (`api-key`).
+- 404: Deployment name mismatch (must equal the deployment you created, not the base model name if different).
+- Rate limiting: Review quota in the Azure resource (Usage + quotas blade) and scale or request increases.
+
+## Local Setup & Run
 
 1. Install dependencies:
 	```bash
 	npm install
 	# or: pnpm install / yarn install
 	```
-2. Copy the environment file and add your key:
+2. Create env file:
 	```bash
 	cp .env.example .env.local
-	```
-	Edit `.env.local`:
-	```bash
-	OPENAI_API_KEY=sk-your-real-key
+	# edit .env.local now
 	```
 3. Run the dev server:
 	```bash
@@ -46,6 +117,7 @@ Next.js 14 (App Router + TypeScript) application that lets you upload a single a
 - The API route is implemented in `src/app/api/transcribe/route.ts`.
 - Increase `maxDuration` or adjust deployment platform settings if your audio files are long.
 - Add file size/type validation as needed for production.
+- For Azure, the code constructs `baseURL` with your deployment path. Do not add `model` in the request when using Azure (deployment chosen via URL); the code already handles this.
 
 ## Extending
 
