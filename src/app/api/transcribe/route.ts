@@ -44,15 +44,13 @@ export async function POST(req: NextRequest) {
       : new OpenAI({ apiKey: apiKey! });
 
     // Model name per user request: gpt-4o-transcribe
-    const transcriptionOptions: any = {
+    const transcriptionParams: OpenAI.Audio.Transcriptions.TranscriptionCreateParams = {
       file,
-      // Optionally: language: 'en', temperature: 0
+      model: 'gpt-4o-transcribe',
+      // Optionally: language: 'en',
+      // temperature: 0,
     };
-    // For public OpenAI we must pass the model name. For Azure, the deployment is encoded in the baseURL so omit 'model'.
-    if (!useAzure) {
-      transcriptionOptions.model = 'gpt-4o-transcribe';
-    }
-    const transcription = await client.audio.transcriptions.create(transcriptionOptions);
+    const transcription = await client.audio.transcriptions.create(transcriptionParams);
 
     const text = (transcription as any).text || JSON.stringify(transcription);
 

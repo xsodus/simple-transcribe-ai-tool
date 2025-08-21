@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   Container,
   Box,
@@ -17,6 +17,8 @@ import {
 } from '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import CheckIcon from '@mui/icons-material/Check';
 
 export default function HomePage() {
   const [file, setFile] = useState<File | null>(null);
@@ -25,6 +27,7 @@ export default function HomePage() {
   const [error, setError] = useState<string>('');
   const [fileName, setFileName] = useState<string>('');
   const [isDragActive, setIsDragActive] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const handleFileSelect = useCallback((f: File | null) => {
     if (!f) {
@@ -66,6 +69,40 @@ export default function HomePage() {
       setIsDragActive(false);
     }
   }, []);
+
+  // Reset copied state whenever transcript changes
+  useEffect(() => {
+    if (copied) setCopied(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transcript]);
+
+  const handleCopyTranscript = useCallback(async () => {
+    if (!transcript) return;
+    try {
+      await navigator.clipboard.writeText(transcript);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch (err) {
+      // Fallback: create a temporary textarea (in very old browsers)
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = transcript;
+        ta.style.position = 'fixed';
+        ta.style.top = '0';
+        ta.style.left = '0';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1800);
+      } catch {
+        // Swallow silently; not critical functionality
+      }
+    }
+  }, [transcript]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,8 +222,25 @@ export default function HomePage() {
           {transcript && (
             <Box>
               <Divider sx={{ mb: 2 }} />
-              <Typography variant="h6" gutterBottom>Transcript</Typography>
-              <Paper variant="outlined" sx={{ p: 2, maxHeight: 360, overflowY: 'auto', background: 'linear-gradient(180deg,#fff,#f8f9fb)' }}>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                <Typography variant="h6" component="h2" sx={{ flexGrow: 1 }}>Transcript</Typography>
+                <Tooltip title={copied ? 'Copied!' : 'Copy to clipboard'} placement="top" arrow>
+                  <span>
+                    <IconButton
+                      aria-label="Copy transcript to clipboard"
+                      onClick={handleCopyTranscript}
+                      size="small"
+                      color={copied ? 'success' : 'default'}
+                    >
+                      {copied ? <CheckIcon fontSize="small" /> : <ContentCopyIcon fontSize="small" />}
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </Stack>
+              <Paper
+                variant="outlined"
+                sx={{ p: 2, maxHeight: 360, overflowY: 'auto', background: 'linear-gradient(180deg,#fff,#f8f9fb)' }}
+              >
                 <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
                   {transcript}
                 </Typography>

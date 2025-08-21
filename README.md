@@ -18,8 +18,12 @@ Next.js 14 (App Router + TypeScript) application that lets you upload a single a
 
 ## Environment Variables
 
-You can run with Azure OpenAI. If **all** Azure vars are present the API route will prefer Azure; otherwise it falls back to Public OpenAI.
+You can run with Public OpenAI or Azure OpenAI. If (and only if) all required Azure vars are present the API route prefers Azure; otherwise it uses Public OpenAI.
 
+Public OpenAI:
+```
+OPENAI_API_KEY=<openai-api-key>
+```
 
 Azure OpenAI (Azure AI Foundry):
 ```
@@ -29,12 +33,17 @@ AZURE_OPENAI_DEPLOYMENT=<your-deployment-name>   # e.g. gpt-4o-transcribe
 AZURE_OPENAI_API_VERSION=2024-06-01              # optional; default used if omitted
 ```
 
-You may keep BOTH sets defined; Azure wins if its three core vars (endpoint, key, deployment) are present.
+Selection logic:
+- If AZURE_OPENAI_ENDPOINT + AZURE_OPENAI_API_KEY + AZURE_OPENAI_DEPLOYMENT are all set -> Azure path is used.
+- Otherwise falls back to OPENAI_API_KEY (Public OpenAI).
+
+You may define both; Azure wins when its three core vars are present.
 
 Security notes:
-- Never commit real keys. `.env` is git-ignored (verify before committing).
+- Never commit real keys (.env is git-ignored; verify before pushing).
 - Rotate keys if leaked.
-- In production, inject vars via your platform's secret manager (Vercel / Azure App Service / Container App / etc.).
+- In production, use your platform secret manager (Vercel / Azure App Service / Container Apps, etc.).
+- Remove unused vars to avoid confusion.
 
 ## .env Example
 
