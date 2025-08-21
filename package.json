@@ -9,22 +9,23 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "14.2.5",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
-    "openai": "4.55.0",
-    "@mui/material": "5.15.20",
-    "@mui/icons-material": "5.15.20",
     "@emotion/react": "11.11.4",
-    "@emotion/styled": "11.11.5"
+    "@emotion/styled": "11.11.5",
+    "@mui/icons-material": "5.15.20",
+    "@mui/material": "5.15.20",
+    "axios": "^1.11.0",
+    "next": "14.2.5",
+    "openai": "4.55.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
   },
   "devDependencies": {
-    "typescript": "5.5.4",
     "@types/node": "20.11.30",
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",
     "eslint": "8.57.0",
-    "eslint-config-next": "14.2.5"
+    "eslint-config-next": "14.2.5",
+    "typescript": "5.5.4"
   },
   "engines": {
     "node": ">=20.11.1"

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useCallback, useEffect } from 'react';
+import axios from 'axios';
 import {
   Container,
   Box,
@@ -117,16 +118,10 @@ export default function HomePage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const res = await fetch('/api/transcribe', {
-        method: 'POST',
-        body: formData,
+      const res = await axios.post('/api/transcribe', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to transcribe');
-      }
-      const data = await res.json();
-      setTranscript(data.text || '');
+      setTranscript(res.data?.text || '');
     } catch (err: any) {
       setError(err.message || 'Unexpected error');
     } finally {
