@@ -18,16 +18,10 @@ Next.js 14 (App Router + TypeScript) application that lets you upload a single a
 
 ## Environment Variables
 
-You can run with either Public OpenAI or Azure OpenAI. If **all** Azure vars are present the API route will prefer Azure; otherwise it falls back to Public OpenAI.
+You can run with Azure OpenAI. If **all** Azure vars are present the API route will prefer Azure; otherwise it falls back to Public OpenAI.
 
-Required (choose ONE provider path):
 
-Public OpenAI only:
-```
-OPENAI_API_KEY=sk-...
-```
-
-Azure OpenAI (Azure AI Foundry) only:
+Azure OpenAI (Azure AI Foundry):
 ```
 AZURE_OPENAI_ENDPOINT=https://<your-resource-name>.openai.azure.com
 AZURE_OPENAI_API_KEY=<azure-openai-key>
@@ -38,7 +32,7 @@ AZURE_OPENAI_API_VERSION=2024-06-01              # optional; default used if omi
 You may keep BOTH sets defined; Azure wins if its three core vars (endpoint, key, deployment) are present.
 
 Security notes:
-- Never commit real keys. `.env.local` is git-ignored (verify before committing).
+- Never commit real keys. `.env` is git-ignored (verify before committing).
 - Rotate keys if leaked.
 - In production, inject vars via your platform's secret manager (Vercel / Azure App Service / Container App / etc.).
 
@@ -47,7 +41,7 @@ Security notes:
 An example file is provided as `.env.example`. Copy and edit:
 
 ```bash
-cp .env.example .env.local
+cp .env.example .env
 ```
 
 Then fill in the values you need. Leave unused provider vars blank or delete them.
@@ -68,7 +62,7 @@ If you prefer Azure (good for enterprise governance, regional data residency, an
 	- Set a deployment name (e.g. `gpt-4o-transcribe`). This exact string goes into `AZURE_OPENAI_DEPLOYMENT`.
 4. (Optional) Confirm API version:
 	- Use `2024-06-01` unless Azure docs direct otherwise. Put it in `AZURE_OPENAI_API_VERSION` if you need a different version.
-5. Populate your `.env.local`:
+5. Populate your `.env`:
 	```
 	AZURE_OPENAI_ENDPOINT=https://<your-resource-name>.openai.azure.com
 	AZURE_OPENAI_API_KEY=<key>
@@ -97,8 +91,8 @@ Troubleshooting:
 	```
 2. Create env file:
 	```bash
-	cp .env.example .env.local
-	# edit .env.local now
+	cp .env.example .env
+	# edit .env
 	```
 3. Run the dev server:
 	```bash
