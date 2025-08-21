@@ -1,5 +1,5 @@
 "use client";
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Container,
   Box,
@@ -24,6 +24,48 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [fileName, setFileName] = useState<string>('');
+  const [isDragActive, setIsDragActive] = useState(false);
+
+  const handleFileSelect = useCallback((f: File | null) => {
+    if (!f) {
+      setFile(null);
+      setFileName('');
+      return;
+    }
+    setFile(f);
+    setFileName(f.name);
+    setError('');
+    setTranscript('');
+  }, [setFile, setFileName]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+    const f = e.dataTransfer.files?.[0];
+    if (f) {
+      if (!f.type.startsWith('audio/')) {
+        setError('Unsupported file type. Please drop an audio file.');
+        return;
+      }
+      handleFileSelect(f);
+    }
+  }, [handleFileSelect]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDragActive) setIsDragActive(true);
+  }, [isDragActive]);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only deactivate if leaving the drop zone (not entering children)
+    if ((e.target as HTMLElement).id === 'drop-zone') {
+      setIsDragActive(false);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,24 +117,55 @@ export default function HomePage() {
                   hidden
                   type="file"
                   accept="audio/*"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0] || null;
-                    setFile(f);
-                    setFileName(f ? f.name : '');
-                  }}
+                  onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
                 />
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
-                  <label htmlFor="audio-upload">
-                    <Button variant="contained" component="span" startIcon={<UploadFileIcon />}>Choose Audio</Button>
-                  </label>
-                  {fileName && <Chip color="primary" variant="outlined" label={fileName} onDelete={() => { setFile(null); setFileName(''); }} />}
-                  {fileName && (
-                    <Tooltip title="Clear">
-                      <IconButton color="secondary" onClick={() => { setFile(null); setFileName(''); setTranscript(''); setError(''); }}>
-                        <RestartAltIcon />
-                      </IconButton>
-                    </Tooltip>
-                  )}
+                <Stack spacing={2}>
+                  <Paper
+                    id="drop-zone"
+                    variant="outlined"
+                    onDragOver={handleDragOver}
+                    onDragEnter={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => document.getElementById('audio-upload')?.click()}
+                    sx={{
+                      p: 4,
+                      textAlign: 'center',
+                      borderStyle: 'dashed',
+                      cursor: 'pointer',
+                      transition: 'background-color .15s, border-color .15s',
+                      outline: 'none',
+                      borderColor: isDragActive ? 'primary.main' : 'divider',
+                      backgroundColor: isDragActive ? 'action.hover' : 'background.paper',
+                      '&:hover': { backgroundColor: 'action.hover' }
+                    }}
+                    aria-label="Drag and drop audio file or click to select"
+                  >
+                    <Stack spacing={1} alignItems="center">
+                      <UploadFileIcon color={isDragActive ? 'primary' : 'action'} fontSize="large" />
+                      <Typography variant="subtitle1" fontWeight={500}>
+                        {isDragActive ? 'Drop the file here' : 'Drag & drop an audio file here'}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        or click to browse
+                      </Typography>
+                      {fileName && (
+                        <Chip sx={{ mt: 1 }} color="primary" variant="outlined" label={fileName} onDelete={() => handleFileSelect(null)} />
+                      )}
+                    </Stack>
+                  </Paper>
+                  <Stack direction="row" spacing={2} alignItems="center" justifyContent="flex-start">
+                    <label htmlFor="audio-upload">
+                      <Button variant="contained" component="span" startIcon={<UploadFileIcon />}>Choose Audio</Button>
+                    </label>
+                    {fileName && (
+                      <Tooltip title="Clear">
+                        <IconButton color="secondary" onClick={() => handleFileSelect(null)}>
+                          <RestartAltIcon />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </Stack>
                 </Stack>
               </Box>
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
