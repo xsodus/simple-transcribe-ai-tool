@@ -1,20 +1,27 @@
 # Simple Transcribe AI Tool
 
-Next.js 14 (App Router + TypeScript) application that lets you upload a single audio file and returns a transcript using OpenAI's `gpt-4o-transcribe` model.
+Next.js 14 (App Router + TypeScript) application that lets you upload a single audio file and returns a cleaned, formatted transcript using OpenAI's `gpt-4o-transcribe` model for transcription and GPT-5 for text cleaning.
+
+![A2T Demo](docs/screenshots/A2T-Demo.png)
 
 ## Features
 
-- Single audio file upload (`audio/*`)
-- Backend API route (`/api/transcribe`) calls OpenAI
+- Single audio file upload with drag & drop support (`audio/*`)
+- Two-stage AI processing:
+  - Audio transcription using OpenAI's `gpt-4o-transcribe` model
+  - Intelligent text cleaning and formatting using GPT-5
+- Graceful fallback to original transcription if cleaning fails
+- Modern Material-UI interface with copy-to-clipboard functionality
+- Backend API route (`/api/transcribe`) with comprehensive error handling
 - Uses official `openai` Node SDK
-- Minimal styling – easy to extend (no CSS framework dependency)
+- Full TypeScript support with comprehensive type definitions
 
 ## Prerequisites
 
 - Node.js 20.11.1+ (or 20+ recommended)
 - EITHER:
-	- An OpenAI API key with access to `gpt-4o-transcribe` (public OpenAI), OR
-	- An Azure OpenAI (Azure AI Foundry) resource with a deployed transcription-capable model (deployment name you create, e.g. `gpt-4o-transcribe`).
+	- An OpenAI API key with access to `gpt-4o-transcribe` and GPT-5 models (public OpenAI), OR
+	- An Azure OpenAI (Azure AI Foundry) resource with deployed transcription and text generation models (deployment names you create, e.g. `gpt-4o-transcribe` and `gpt-5`).
 
 ## Environment Variables
 
@@ -111,25 +118,74 @@ Troubleshooting:
 
 ## Usage
 
-1. Choose an audio file (e.g. `.mp3`, `.m4a`, `.wav`, `.ogg`).
+1. Choose an audio file (e.g. `.mp3`, `.m4a`, `.wav`, `.ogg`) by clicking "Choose Audio" or drag & drop onto the upload area.
 2. Click **Transcribe**.
-3. Wait for the server to process and display the transcript.
+3. Wait for the server to process the audio through two AI stages:
+   - First, transcription using `gpt-4o-transcribe`
+   - Then, text cleaning and formatting using GPT-5
+4. View the cleaned, formatted transcript with copy-to-clipboard functionality.
+
+**Note**: If text cleaning fails, the application will gracefully fall back to the original transcription to ensure you always get results.
+
+## Architecture
+
+The application follows a clean, modular architecture:
+
+- **API Layer**: `src/app/api/transcribe/route.ts` - Main transcription endpoint
+- **Services**: 
+  - `src/lib/textCleaningService.ts` - GPT-5 text cleaning service
+  - `src/lib/openAPIFactory.ts` - OpenAI client factory with dual provider support
+- **Types**: `src/lib/types.ts` - Comprehensive TypeScript interfaces
+- **Frontend**: Material-UI React components with drag & drop file upload
+- **Testing**: Jest unit and integration tests with coverage reporting
+
+## Text Cleaning Features
+
+The GPT-5 text cleaning service provides:
+
+- Grammar and punctuation correction
+- Removal of filler words (um, uh, like, you know)
+- Elimination of repetitions and false starts
+- Proper paragraph breaks and sentence structure
+- Consistent capitalization
+- Meaning preservation without adding new information
 
 ## Notes
 
 - The API route is implemented in `src/app/api/transcribe/route.ts`.
+- Text cleaning uses a 30-second timeout with retry logic and graceful fallback.
 - Increase `maxDuration` or adjust deployment platform settings if your audio files are long.
 - Add file size/type validation as needed for production.
 - For Azure, the code constructs `baseURL` with your deployment path. Do not add `model` in the request when using Azure (deployment chosen via URL); the code already handles this.
+- All responses include proper TypeScript interfaces for type safety.
+
+## Testing
+
+The project includes comprehensive testing:
+
+```bash
+npm test                # Run all tests
+npm run test:watch      # Run tests in watch mode
+npm run test:coverage   # Generate coverage reports
+```
+
+Test coverage includes:
+- Unit tests for text cleaning service
+- Integration tests for the complete API flow
+- Error handling and fallback scenarios
+- Both Azure OpenAI and public OpenAI configurations
 
 ## Extending
 
 Ideas to extend this project:
 
-- Add language selection
+- Add language selection for transcription
 - Support streaming partial transcripts
 - Persist transcripts to a database
-- Add authentication
+- Add authentication and user management
+- Implement custom text cleaning prompts
+- Add batch processing for multiple files
+- Support for different output formats (JSON, SRT, etc.)
 
 ## License
 

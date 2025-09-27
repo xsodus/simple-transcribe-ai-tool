@@ -51,3 +51,7 @@
   - Test error scenarios and fallback behavior
   - Verify response format matches expected interface
   - _Requirements: 1.1, 1.3, 1.4_
+
+- [x] 8. Update README.md 
+  - Ensure it match with current codebase
+  - Add A2T-Demo.png to the document
