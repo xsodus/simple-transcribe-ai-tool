@@ -9,7 +9,6 @@ export {
   TextCleaningServiceImpl,
   CleaningResult,
   createTextCleaningService,
-  textCleaningService,
 } from "./textCleaningService";
 
 // API response type exports

@@ -52,7 +52,7 @@ export class OpenAPIFactory {
             //  AZURE_OPENAI_DEPLOYMENT=gpt-5 (deployment name you created)
             //  (optional) AZURE_OPENAI_API_VERSION=2024-06-01
             const azureEndpoint = process.env.AZURE_OPENAI_ENDPOINT;
-            const azureApiKey = process.env.AZURE_OPENAI_LLM_API_KEY;
+            const azureApiKey = process.env.AZURE_OPENAI_API_KEY;
             const azureDeployment = process.env.AZURE_OPENAI_LLM_DEPLOYMENT; 
             const azureApiVersion =
               process.env.AZURE_OPENAI_API_VERSION || "2024-06-01";

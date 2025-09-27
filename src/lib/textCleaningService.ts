@@ -184,7 +184,7 @@ export class TextCleaningServiceImpl implements TextCleaningService {
       console.log("Sending text cleaning request to GPT-5...");
       const response = await client.chat.completions.create(
         {
-          model: "gpt-5", // Use GPT-5 for text cleaning as specified in requirements
+          model: "", // Use GPT-5 for text cleaning as specified in requirements
           messages: [
             {
               role: "user",
@@ -192,7 +192,6 @@ export class TextCleaningServiceImpl implements TextCleaningService {
             },
           ],
           temperature: 0.1, // Low temperature for consistent cleaning
-          max_tokens: Math.max(1000, rawText.length * 2), // Ensure enough tokens for response
         },
         {
           signal: controller.signal,
