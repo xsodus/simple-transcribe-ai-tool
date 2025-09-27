@@ -175,18 +175,6 @@ Test coverage includes:
 - Error handling and fallback scenarios
 - Both Azure OpenAI and public OpenAI configurations
 
-## Extending
-
-Ideas to extend this project:
-
-- Add language selection for transcription
-- Support streaming partial transcripts
-- Persist transcripts to a database
-- Add authentication and user management
-- Implement custom text cleaning prompts
-- Add batch processing for multiple files
-- Support for different output formats (JSON, SRT, etc.)
-
 ## License
 
 MIT
