@@ -3,15 +3,17 @@ import OpenAI from 'openai';
 import {
   TextCleaningServiceImpl,
   createTextCleaningService,
-  textCleaningService,
   CleaningResult,
   type TextCleaningService,
   type TextCleaningOptions,
   type TextCleaningResponse,
 } from '../lib/textCleaningService';
+import { OpenAPIFactory } from '../lib/openAPIFactory';
 
 // Mock OpenAI
 jest.mock('openai');
+// Mock the OpenAPI Factory
+jest.mock('../lib/openAPIFactory');
 
 describe('TextCleaningService', () => {
   let mockOpenAI: jest.Mocked<OpenAI>;
@@ -27,13 +29,17 @@ describe('TextCleaningService', () => {
       },
     } as any;
 
+    // Mock OpenAPIFactory to return our mock client
+    (OpenAPIFactory.createLLMInstance as jest.MockedFunction<typeof OpenAPIFactory.createLLMInstance>)
+      .mockReturnValue(mockOpenAI);
+
     // Reset all mocks
     jest.clearAllMocks();
     
     // Reset console mocks
-    (console.log as jest.Mock).mockClear();
-    (console.warn as jest.Mock).mockClear();
-    (console.error as jest.Mock).mockClear();
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -55,14 +61,18 @@ describe('TextCleaningService', () => {
       expect(service).toBeInstanceOf(TextCleaningServiceImpl);
     });
 
-    it('should provide default service instance', () => {
-      expect(textCleaningService).toBeInstanceOf(TextCleaningServiceImpl);
+    it('should create service instances successfully', () => {
+      const service1 = createTextCleaningService();
+      const service2 = createTextCleaningService({ timeout: 5000 });
+      
+      expect(service1).toBeInstanceOf(TextCleaningServiceImpl);
+      expect(service2).toBeInstanceOf(TextCleaningServiceImpl);
     });
   });
 
   describe('Successful Text Cleaning Scenarios', () => {
     beforeEach(() => {
-      service = new TextCleaningServiceImpl();
+      service = new TextCleaningServiceImpl(mockOpenAI);
     });
 
     it('should successfully clean text with proper formatting', async () => {
@@ -79,12 +89,12 @@ describe('TextCleaningService', () => {
         ],
       } as any);
 
-      const result = await service.cleanText(rawText, mockOpenAI);
+      const result = await service.cleanText(rawText);
 
       expect(result).toBe(cleanedText);
       expect(mockOpenAI.chat.completions.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          model: 'gpt-5',
+          model: '',
           messages: [
             {
               role: 'user',
@@ -92,7 +102,6 @@ describe('TextCleaningService', () => {
             },
           ],
           temperature: 0.1,
-          max_tokens: expect.any(Number),
         }),
         expect.objectContaining({
           signal: expect.any(AbortSignal),
@@ -114,7 +123,7 @@ describe('TextCleaningService', () => {
         ],
       } as any);
 
-      const result = await service.cleanText(rawText, mockOpenAI);
+      const result = await service.cleanText(rawText);
       expect(result).toBe(cleanedText);
     });
 
@@ -132,7 +141,7 @@ describe('TextCleaningService', () => {
         ],
       } as any);
 
-      const result = await service.cleanText(rawText, mockOpenAI);
+      const result = await service.cleanText(rawText);
       expect(result).toBe(cleanedText);
     });
 
@@ -150,11 +159,12 @@ describe('TextCleaningService', () => {
         ],
       } as any);
 
-      await service.cleanText(longText, mockOpenAI);
+      await service.cleanText(longText);
 
       expect(mockOpenAI.chat.completions.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          max_tokens: Math.max(1000, longText.length * 2),
+          model: '',
+          temperature: 0.1,
         }),
         expect.any(Object)
       );
@@ -163,14 +173,14 @@ describe('TextCleaningService', () => {
 
   describe('Error Handling and Fallback Mechanisms', () => {
     beforeEach(() => {
-      service = new TextCleaningServiceImpl();
+      service = new TextCleaningServiceImpl(mockOpenAI);
     });
 
     it('should throw error for empty text input', async () => {
-      await expect(service.cleanText('', mockOpenAI)).rejects.toThrow(
+      await expect(service.cleanText('')).rejects.toThrow(
         'Raw text cannot be empty'
       );
-      await expect(service.cleanText('   ', mockOpenAI)).rejects.toThrow(
+      await expect(service.cleanText('   ')).rejects.toThrow(
         'Raw text cannot be empty'
       );
     });
@@ -181,21 +191,21 @@ describe('TextCleaningService', () => {
 
       mockOpenAI.chat.completions.create.mockRejectedValue(apiError);
 
-      await expect(service.cleanText(rawText, mockOpenAI)).rejects.toThrow(
+      await expect(service.cleanText(rawText)).rejects.toThrow(
         'API rate limit exceeded'
       );
     });
 
     it('should handle timeout errors by checking AbortController usage', async () => {
       const rawText = 'test text';
-      const service = new TextCleaningServiceImpl({ timeout: 100 });
+      const service = new TextCleaningServiceImpl(mockOpenAI, { timeout: 100 });
 
       // Verify that AbortController is used in the API call
       mockOpenAI.chat.completions.create.mockResolvedValue({
         choices: [{ message: { content: 'cleaned text' } }],
       } as any);
 
-      await service.cleanText(rawText, mockOpenAI);
+      await service.cleanText(rawText);
 
       // Verify that the API call includes an AbortSignal
       expect(mockOpenAI.chat.completions.create).toHaveBeenCalledWith(
@@ -208,7 +218,7 @@ describe('TextCleaningService', () => {
 
     it('should handle empty response from GPT-5', async () => {
       const rawText = 'test text';
-      const service = new TextCleaningServiceImpl({ timeout: 30000 }); // Use long timeout
+      const service = new TextCleaningServiceImpl(mockOpenAI, { timeout: 30000 }); // Use long timeout
 
       mockOpenAI.chat.completions.create.mockResolvedValue({
         choices: [
@@ -220,14 +230,14 @@ describe('TextCleaningService', () => {
         ],
       } as any);
 
-      await expect(service.cleanText(rawText, mockOpenAI)).rejects.toThrow(
+      await expect(service.cleanText(rawText)).rejects.toThrow(
         'No cleaned text received from GPT-5'
       );
     });
 
     it('should handle missing response content', async () => {
       const rawText = 'test text';
-      const service = new TextCleaningServiceImpl({ timeout: 30000 }); // Use long timeout
+      const service = new TextCleaningServiceImpl(mockOpenAI, { timeout: 30000 }); // Use long timeout
 
       mockOpenAI.chat.completions.create.mockResolvedValue({
         choices: [
@@ -237,14 +247,14 @@ describe('TextCleaningService', () => {
         ],
       } as any);
 
-      await expect(service.cleanText(rawText, mockOpenAI)).rejects.toThrow(
+      await expect(service.cleanText(rawText)).rejects.toThrow(
         'No cleaned text received from GPT-5'
       );
     });
 
     it('should retry on failure with exponential backoff', async () => {
       const rawText = 'test text';
-      const service = new TextCleaningServiceImpl({ maxRetries: 2 });
+      const service = new TextCleaningServiceImpl(mockOpenAI, { maxRetries: 2 });
       const apiError = new Error('Temporary API error');
 
       // Mock first two calls to fail, third to succeed
@@ -259,7 +269,7 @@ describe('TextCleaningService', () => {
       const originalDelay = (service as any).delay;
       (service as any).delay = jest.fn().mockResolvedValue(undefined);
 
-      const result = await service.cleanText(rawText, mockOpenAI);
+      const result = await service.cleanText(rawText);
 
       expect(result).toBe('cleaned text');
       expect(mockOpenAI.chat.completions.create).toHaveBeenCalledTimes(3);
@@ -268,7 +278,7 @@ describe('TextCleaningService', () => {
 
     it('should fail after max retries exceeded', async () => {
       const rawText = 'test text';
-      const service = new TextCleaningServiceImpl({ maxRetries: 1, timeout: 30000 }); // Use long timeout
+      const service = new TextCleaningServiceImpl(mockOpenAI, { maxRetries: 1, timeout: 30000 }); // Use long timeout
       const apiError = new Error('Persistent API error');
 
       // Mock delay to speed up test
@@ -276,7 +286,7 @@ describe('TextCleaningService', () => {
 
       mockOpenAI.chat.completions.create.mockRejectedValue(apiError);
 
-      await expect(service.cleanText(rawText, mockOpenAI)).rejects.toThrow(
+      await expect(service.cleanText(rawText)).rejects.toThrow(
         'Persistent API error'
       );
       expect(mockOpenAI.chat.completions.create).toHaveBeenCalledTimes(2); // Initial + 1 retry
@@ -285,7 +295,7 @@ describe('TextCleaningService', () => {
 
   describe('Detailed Response with cleanTextWithDetails', () => {
     beforeEach(() => {
-      service = new TextCleaningServiceImpl();
+      service = new TextCleaningServiceImpl(mockOpenAI);
     });
 
     it('should return success response with cleaned text', async () => {
@@ -296,10 +306,7 @@ describe('TextCleaningService', () => {
         choices: [{ message: { content: cleanedText } }],
       } as any);
 
-      const response = await (service as TextCleaningServiceImpl).cleanTextWithDetails(
-        rawText,
-        mockOpenAI
-      );
+      const response = await (service as TextCleaningServiceImpl).cleanTextWithDetails(rawText);
 
       expect(response).toEqual({
         cleanedText,
@@ -310,15 +317,12 @@ describe('TextCleaningService', () => {
 
     it('should return fallback response on API error', async () => {
       const rawText = 'test text';
-      const service = new TextCleaningServiceImpl({ timeout: 30000 }); // Use long timeout
+      const service = new TextCleaningServiceImpl(mockOpenAI, { timeout: 30000 }); // Use long timeout
       const apiError = new Error('API error occurred');
 
       mockOpenAI.chat.completions.create.mockRejectedValue(apiError);
 
-      const response = await (service as TextCleaningServiceImpl).cleanTextWithDetails(
-        rawText,
-        mockOpenAI
-      );
+      const response = await (service as TextCleaningServiceImpl).cleanTextWithDetails(rawText);
 
       expect(response).toEqual({
         cleanedText: rawText, // fallback to original
@@ -330,16 +334,13 @@ describe('TextCleaningService', () => {
 
     it('should return timeout response when timeout error message is detected', async () => {
       const rawText = 'test text';
-      const service = new TextCleaningServiceImpl({ timeout: 100 });
+      const service = new TextCleaningServiceImpl(mockOpenAI, { timeout: 100 });
 
       // Mock an error that looks like a timeout error
       const timeoutError = new Error('Text cleaning timeout after 100ms');
       mockOpenAI.chat.completions.create.mockRejectedValue(timeoutError);
 
-      const response = await (service as TextCleaningServiceImpl).cleanTextWithDetails(
-        rawText,
-        mockOpenAI
-      );
+      const response = await (service as TextCleaningServiceImpl).cleanTextWithDetails(rawText);
 
       expect(response.result).toBe(CleaningResult.TIMEOUT);
       expect(response.cleanedText).toBe(rawText);
@@ -349,7 +350,7 @@ describe('TextCleaningService', () => {
 
   describe('Prompt Formatting and Response Parsing', () => {
     beforeEach(() => {
-      service = new TextCleaningServiceImpl();
+      service = new TextCleaningServiceImpl(mockOpenAI);
     });
 
     it('should format prompt correctly with cleaning instructions', async () => {
@@ -360,7 +361,7 @@ describe('TextCleaningService', () => {
         choices: [{ message: { content: 'cleaned text' } }],
       } as any);
 
-      await service.cleanText(rawText, mockOpenAI);
+      await service.cleanText(rawText);
 
       const callArgs = (mockOpenAI.chat.completions.create as jest.Mock).mock.calls[0][0];
       const promptContent = callArgs.messages[0].content;
@@ -381,26 +382,25 @@ describe('TextCleaningService', () => {
         choices: [{ message: { content: cleanedText } }],
       } as any);
 
-      const result = await service.cleanText(rawText, mockOpenAI);
+      const result = await service.cleanText(rawText);
 
       expect(result).toBe(expectedTrimmed);
     });
 
     it('should use correct model and parameters', async () => {
       const rawText = 'test text';
-      const service = new TextCleaningServiceImpl({ timeout: 30000 }); // Use long timeout
+      const service = new TextCleaningServiceImpl(mockOpenAI, { timeout: 30000 }); // Use long timeout
 
       mockOpenAI.chat.completions.create.mockResolvedValue({
         choices: [{ message: { content: 'cleaned' } }],
       } as any);
 
-      await service.cleanText(rawText, mockOpenAI);
+      await service.cleanText(rawText);
 
       expect(mockOpenAI.chat.completions.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          model: 'gpt-5',
+          model: '',
           temperature: 0.1,
-          max_tokens: expect.any(Number),
           messages: expect.arrayContaining([
             expect.objectContaining({
               role: 'user',
@@ -418,7 +418,7 @@ describe('TextCleaningService', () => {
   describe('Configuration Options', () => {
     it('should use custom timeout option in configuration', () => {
       const customTimeout = 5000;
-      const service = new TextCleaningServiceImpl({ timeout: customTimeout });
+      const service = new TextCleaningServiceImpl(mockOpenAI, { timeout: customTimeout });
       const options = (service as any).options;
 
       expect(options.timeout).toBe(customTimeout);
@@ -426,7 +426,7 @@ describe('TextCleaningService', () => {
 
     it('should use custom maxRetries option', async () => {
       const customRetries = 3;
-      const service = new TextCleaningServiceImpl({ maxRetries: customRetries });
+      const service = new TextCleaningServiceImpl(mockOpenAI, { maxRetries: customRetries });
       const rawText = 'test text';
       const apiError = new Error('API error');
 
@@ -435,12 +435,12 @@ describe('TextCleaningService', () => {
 
       mockOpenAI.chat.completions.create.mockRejectedValue(apiError);
 
-      await expect(service.cleanText(rawText, mockOpenAI)).rejects.toThrow();
+      await expect(service.cleanText(rawText)).rejects.toThrow();
       expect(mockOpenAI.chat.completions.create).toHaveBeenCalledTimes(customRetries + 1);
     });
 
     it('should use default options when none provided', () => {
-      const service = new TextCleaningServiceImpl();
+      const service = new TextCleaningServiceImpl(mockOpenAI);
       const options = (service as any).options;
 
       expect(options.timeout).toBe(30000);

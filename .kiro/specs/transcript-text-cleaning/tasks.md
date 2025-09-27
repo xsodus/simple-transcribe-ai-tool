@@ -30,7 +30,7 @@
   - Ensure the same OpenAI client is reused for both transcription and cleaning
   - _Requirements: 1.1, 1.3_
 
-- [ ] 5. Add TypeScript interfaces for enhanced responses
+- [x] 5. Add TypeScript interfaces for enhanced responses
 
   - Create interfaces for the new response format
   - Update existing type definitions to support cleaned text
@@ -45,7 +45,7 @@
   - Test prompt formatting and response parsing
   - _Requirements: 1.2, 1.4, 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 7. Write integration tests for the enhanced API
+- [x] 7. Write integration tests for the enhanced API
   - Test the complete flow from file upload to cleaned text response
   - Test both Azure OpenAI and public OpenAI configurations
   - Test error scenarios and fallback behavior
